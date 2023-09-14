@@ -33,11 +33,6 @@ count_per_wk = hr.reset_index()[['id', 'counts']].groupby('id').sum()
 
 all_counters = np.sort(list(counters['name'].unique()))
 
-# set chart widths
-browser_width = streamlit_js_eval(js_expressions='window.innerWidth', key='SCR')
-legend_width = browser_width * 0.05
-chart_width = browser_width * 0.65
-
 ### SIDEBAR
 with st.sidebar:
     selected_counters = st.multiselect("select counters:", 
@@ -104,6 +99,12 @@ with st.sidebar:
 select_hr = filter_df_counters(hr, selected_counter_ids)
 select_wk = filter_df_counters(wk, selected_counter_ids)
 select_hist_wk = filter_df_dates(select_hist_wk, start_date, end_date)
+
+# render
+# set chart widths
+browser_width = streamlit_js_eval(js_expressions='window.innerWidth', key='SCR')
+legend_width = browser_width * 0.05
+chart_width = browser_width * 0.65
 
 ## LEGEND
 num_selected_counters = len(selected_counters)
@@ -219,8 +220,7 @@ hist_wk_chart = alt.Chart(select_hist_wk.reset_index()).mark_line().encode(
     opacity=alt.condition(hover_selection, alt.value(1), alt.value(0.4))
     ).properties(title='historical weekly ridership', width=chart_width).add_params(hover_selection)
 
-
-# render
+#render
 combo_chart = hr_chart_bound & wk_chart_bound & hist_wk_chart
 combo_chart_legend = legend_chart | combo_chart
 st.altair_chart(combo_chart_legend.configure_axis(labelFontSize=16).configure_title(fontSize=24), use_container_width=True)
