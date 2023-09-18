@@ -10,6 +10,14 @@ from streamlit_js_eval import streamlit_js_eval
 st.set_page_config(page_title="NYC Biking Data", layout="wide")
 st.title("Bike ridership in NYC")
 
+st.write('NYC DOT tracks bike ridership via dozens of counters places on bike paths around NYC. The below charts show hourly and annual trends \
+         in ridership patterns. You can use the selector and map in the sidebar to look at specific counters and use the date slider \
+         at the bottom to look at specific weeks.')
+bp = 'https://nyc-bike-prediction.streamlit.app/'
+st.write('If you\'re looking for the model where I predict daily ridership from this data, \
+         go [here](%s).' % bp)
+
+
 ### filter dfs func
 def filter_df_counters(df, counter_selection):
     new_df = df[df.index.get_level_values('id').isin(counter_selection)].copy()
@@ -48,21 +56,6 @@ with st.sidebar:
     else:
         selected_counter_ids = counters.loc[counters['name'].isin(selected_counters), :].index
 
-    ### DATE SLIDER
-    st.write('')
-    select_hist_wk = filter_df_counters(hist_wk, selected_counter_ids)
-    date_list = pd.to_datetime(select_hist_wk.index.get_level_values('date').to_series().dt.strftime('%Y-%m').unique()).to_series()
-
-    selected_dates = st.select_slider("select historical chart dates:",
-                                    value=[date_list[0], date_list[-1]],
-                                    options=date_list,
-                                    format_func=lambda date_list: date_list.strftime('%b-%Y')
-                                    ) 
-    if len(selected_dates)==0:
-        selected_dates = (date_list[0], date_list[-1])
-    start_date = selected_dates[0]
-    end_date = selected_dates[1]
-
     ### MAP
     select_counters = filter_df_counters(counters, selected_counter_ids)
     m = folium.Map(location=[40.720, -73.94], zoom_start=11)
@@ -98,7 +91,6 @@ with st.sidebar:
 ### filter dfs
 select_hr = filter_df_counters(hr, selected_counter_ids)
 select_wk = filter_df_counters(wk, selected_counter_ids)
-select_hist_wk = filter_df_dates(select_hist_wk, start_date, end_date)
 
 # render
 # set chart widths
@@ -211,16 +203,47 @@ wk_chart_bound = alt.layer(
     wk_chart, selectors, points, rules, text
 )
 
+#render
+combo_chart = hr_chart_bound & wk_chart_bound
+combo_chart_legend = legend_chart | combo_chart
+st.altair_chart(combo_chart_legend.configure_axis(labelFontSize=16).configure_title(fontSize=24), use_container_width=True)
+
 ### HISTORICAL WEEKLY CHART
+select_hist_wk = filter_df_counters(hist_wk, selected_counter_ids)
+### DATE SLIDER
+st.write('')
+st.markdown("<h4 style='text-align: center;'>historical weekly ridership</h4>", unsafe_allow_html=True)
+date_list = pd.to_datetime(select_hist_wk.index.get_level_values('date').to_series().dt.strftime('%Y-%m').unique()).to_series()
+
+selected_dates = st.select_slider("select chart dates:",
+                                value=[date_list[0], date_list[-1]],
+                                options=date_list,
+                                format_func=lambda date_list: date_list.strftime('%b-%Y')
+                                ) 
+if len(selected_dates)==0:
+    selected_dates = (date_list[0], date_list[-1])
+start_date = selected_dates[0]
+end_date = selected_dates[1]
+
+select_hist_wk = filter_df_dates(select_hist_wk, start_date, end_date)
 hist_wk_chart = alt.Chart(select_hist_wk.reset_index()).mark_line().encode(
     x=alt.X('date:T', axis=alt.Axis(tickCount={'interval':'month', 'step':3}, title=None, format='%b-%Y', grid=True)),
     y=alt.Y('counts:Q', title='riders per week'),
     color=alt.Color('color:N', scale=None),
     tooltip='name:O',
     opacity=alt.condition(hover_selection, alt.value(1), alt.value(0.4))
-    ).properties(title='historical weekly ridership', width=chart_width).add_params(hover_selection)
+    ).properties(width=chart_width).add_params(hover_selection)
 
-#render
-combo_chart = hr_chart_bound & wk_chart_bound & hist_wk_chart
-combo_chart_legend = legend_chart | combo_chart
-st.altair_chart(combo_chart_legend.configure_axis(labelFontSize=16).configure_title(fontSize=24), use_container_width=True)
+# render
+hist_wk_chart_legend = legend_chart | hist_wk_chart
+st.altair_chart(hist_wk_chart_legend.configure_axis(labelFontSize=16).configure_title(fontSize=24), use_container_width=True)
+
+# footnotes
+st.markdown("<h4 style='text-align: center;'>background & sources</h4>", unsafe_allow_html=True)
+c1, c2 = st.columns(2)
+with c1:
+    li = 'https://www.nls.website/'
+    st.write('This streamlit app and underlying model were developed \
+            by [Nick Liu-Sontag](%s), a data scientist :nerd_face: in Brooklyn, NY' % li)
+    od = 'https://data.cityofnewyork.us/Transportation/Bicycle-Counts/uczf-rk3c'
+    st.write('Data for this project was sourced from [NYC Open Data](%s).' % od)
