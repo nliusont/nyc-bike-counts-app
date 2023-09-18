@@ -248,7 +248,5 @@ with c1:
     gh = 'https://github.com/nliusont/nyc-bike-counts'
     st.write('You can find the notebooks that I used to prepare this date \
         [here](%s).' % gh)
-    st.write('This streamlit app and underlying model were developed \
-            by [Nick Liu-Sontag](%s), a data scientist :nerd_face: in Brooklyn, NY' % li)
     od = 'https://data.cityofnewyork.us/Transportation/Bicycle-Counts/uczf-rk3c'
     st.write('Data for this project was sourced from [NYC Open Data](%s).' % od)
